@@ -187,14 +187,14 @@ async function compressImage(buffer, options = {}) {
 
 const HEIC_MIMES = new Set(['image/heic', 'image/heif'])
 
-async function heicToJpeg(buffer) {
+async function heicToPng(buffer) {
   const inputPath  = await writeTempFile(buffer, '.heic')
-  const outputPath = inputPath.replace('.heic', '.jpg')
+  const outputPath = inputPath.replace('.heic', '.png')
   try {
     await execFileAsync('ffmpeg', [
       '-i', inputPath,
       '-vframes', '1',
-      '-q:v', '2',
+      '-vf', 'format=rgb24',  // materialise all colour channels before encoding
       '-y',
       outputPath,
     ], { timeout: COMPRESS_TIMEOUT_MS })
@@ -345,8 +345,8 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
         // lacks the HEVC codec, so a probe-based fallback never fires. FFmpeg
         // uses its own internal HEVC decoder and reliably handles HEIC.
         if (HEIC_MIMES.has(mime)) {
-          imgBuffer = await heicToJpeg(imgBuffer)
-          imgMime   = 'image/jpeg'
+          imgBuffer = await heicToPng(imgBuffer)
+          imgMime   = 'image/png'
         }
 
         const rawFormat = String(req.query.format || 'webp')

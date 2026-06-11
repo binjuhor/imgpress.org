@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImgPress — Image Compressor</title>
+  <title>ImgPress — Media Compressor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -14,17 +14,36 @@
 
   <div class="brand">
     <h1>Img<em>Press</em></h1>
-    <p>Batch image compressor</p>
+    <p>Compress images, audio, video &amp; PDF — free, private, no uploads stored</p>
   </div>
 
   <div id="drop-zone">
-    <input type="file" id="file-input" accept="image/*" multiple>
-    <h2>Drop images here</h2>
-    <p>or click to browse — up to 20 files, 50 MB each</p>
+    <input type="file" id="file-input" accept="image/*,audio/*,video/*,application/pdf" multiple>
+    <h2>Drop your files here</h2>
+    <p>Images &middot; Audio &middot; Video &middot; PDF &mdash; up to 20 files at once</p>
+  </div>
+
+  <div class="supported-types">
+    <div class="stype stype--image">
+      <span class="stype-label">Image</span>
+      <span class="stype-formats">JPEG &middot; PNG &middot; WebP &middot; AVIF &middot; GIF &middot; HEIC &middot; TIFF &middot; BMP</span>
+    </div>
+    <div class="stype stype--audio">
+      <span class="stype-label">Audio</span>
+      <span class="stype-formats">MP3 &middot; WAV &middot; FLAC &middot; AAC &middot; OGG &middot; M4A &rarr; compressed AAC</span>
+    </div>
+    <div class="stype stype--video">
+      <span class="stype-label">Video</span>
+      <span class="stype-formats">MOV &middot; AVI &middot; MKV &middot; WMV &middot; FLV &middot; WebM &rarr; H.264 MP4</span>
+    </div>
+    <div class="stype stype--pdf">
+      <span class="stype-label">PDF</span>
+      <span class="stype-formats">Any PDF &rarr; optimised with screen / ebook / printer quality presets</span>
+    </div>
   </div>
 
   <div class="controls">
-    <div class="pill-group">
+    <div class="pill-group" title="Output format — applies to images only">
       <button class="pill active" data-val="auto">Auto</button>
       <button class="pill" data-val="webp">WebP</button>
       <button class="pill" data-val="avif">AVIF</button>
@@ -36,7 +55,7 @@
       <input type="range" id="q-range" min="1" max="100" value="80" step="1">
       <span id="quality-val">80</span>
     </div>
-    <select id="width-sel">
+    <select id="width-sel" title="Max width — applies to images only">
       <option value="9999" selected>Original</option>
       <option value="2400">2400px</option>
       <option value="1600">1600px</option>
@@ -53,17 +72,17 @@
       <div><div class="stat-val" id="s-orig">—</div><div class="stat-label">Original</div></div>
       <div><div class="stat-val" id="s-comp">—</div><div class="stat-label">Compressed</div></div>
       <div><div class="stat-val green" id="s-ratio">—</div><div class="stat-label">Saved</div></div>
-         <button class="dl-zip-btn" id="dl-zip-btn">
-      <span id="dl-label">Download all</span>
-    </button>
-    <a class="clear-link" id="clear-link">Clear all</a>
+      <button class="dl-zip-btn" id="dl-zip-btn">
+        <span id="dl-label">Download all</span>
+      </button>
+      <a class="clear-link" id="clear-link">Clear all</a>
     </div>
   </div>
 
   <div class="footer">
-    JPEG &middot; PNG &middot; WebP &middot; AVIF &middot; GIF &middot; TIFF &middot; BMP &middot; HEIC &middot; ICO<br>
-    Lossless &middot; Lossy &middot; Palette quantisation &middot; EXIF strip &middot; Auto resize
+    Lossless &middot; Lossy &middot; EXIF strip &middot; Auto resize &middot; Palette quantisation &middot; Up to 50 MB per file (500 MB for video)
   </div>
+
 </div>
 
 <script src="script.js"></script>

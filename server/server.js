@@ -4,11 +4,17 @@ import express from 'express'
 import multer from 'multer'
 import sharp from 'sharp'
 import path from 'path'
+import os from 'os'
+import fs from 'fs/promises'
+import crypto from 'crypto'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import { fileURLToPath } from 'url'
 
 dotenv.config()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const execFileAsync = promisify(execFile)
 
 const config = {
   PORT: parseInt(process.env.PORT || '3000'),
@@ -18,6 +24,7 @@ const config = {
   MAX_IMAGE_SIDE_PX: parseInt(process.env.MAX_IMAGE_SIDE_PX || '20000'),
   MAX_IMAGE_MEGAPIXELS: parseInt(process.env.MAX_IMAGE_MEGAPIXELS || '200'),
   MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '50'),
+  MAX_VIDEO_FILE_SIZE_MB: parseInt(process.env.MAX_VIDEO_FILE_SIZE_MB || '500'),
   MAX_FILES: parseInt(process.env.MAX_FILES || '20'),
   COMPRESS_TIMEOUT_MS: parseInt(process.env.COMPRESS_TIMEOUT_MS || '300000'),
   DEFAULT_QUALITY: parseInt(process.env.DEFAULT_QUALITY || '80'),
@@ -33,7 +40,7 @@ const app = express()
 
 const upload = multer({
   limits: {
-    fileSize: (config.MAX_FILE_SIZE_MB) * 1024 * 1024,
+    fileSize: Math.max(config.MAX_FILE_SIZE_MB, config.MAX_VIDEO_FILE_SIZE_MB) * 1024 * 1024,
     files: config.MAX_FILES
   }
 })
@@ -54,6 +61,20 @@ const MIME_TO_FORMAT = {
   'image/heic': 'jpeg', 'image/heif': 'jpeg',
 }
 
+const AUDIO_MIMES = new Set([
+  'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
+  'audio/flac', 'audio/x-flac', 'audio/ogg', 'audio/aac',
+  'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/opus',
+  'audio/webm', 'audio/3gpp',
+])
+
+const VIDEO_MIMES = new Set([
+  'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/avi',
+  'video/x-matroska', 'video/x-ms-wmv', 'video/wmv', 'video/x-flv',
+  'video/webm', 'video/3gpp', 'video/mpeg', 'video/x-mpeg',
+  'video/m4v', 'video/x-m4v',
+])
+
 const COMPRESS_TIMEOUT_MS = config.COMPRESS_TIMEOUT_MS
 
 function compressTimeout(req, res, next) {
@@ -69,6 +90,20 @@ function parseNumber(value, fallback) {
   const n = Number(value)
   return Number.isNaN(n) ? fallback : n
 }
+
+// ─── Temp file helpers ────────────────────────────────────────────────────────
+
+async function writeTempFile(buffer, ext = '') {
+  const p = path.join(os.tmpdir(), `imgpress-${crypto.randomUUID()}${ext}`)
+  await fs.writeFile(p, buffer)
+  return p
+}
+
+async function removeTempFiles(...paths) {
+  await Promise.all(paths.map(p => fs.unlink(p).catch(() => {})))
+}
+
+// ─── Image ────────────────────────────────────────────────────────────────────
 
 async function analyzeImage(buffer) {
   const meta = await sharp(buffer, { failOn: 'none' }).metadata()
@@ -106,6 +141,7 @@ function smartDither(q) {
   const raw = ditherMax - (q / 100) * (ditherMax - ditherMin)
   return parseFloat(Math.max(ditherMin, Math.min(ditherMax, raw)).toFixed(2))
 }
+
 async function compressImage(buffer, options = {}) {
   const defaultQuality = config.DEFAULT_QUALITY
   const defaultWidth = config.DEFAULT_WIDTH
@@ -144,6 +180,119 @@ async function compressImage(buffer, options = {}) {
   return { buffer: output.data, info: output.info, mime }
 }
 
+// ─── HEIC pre-conversion ──────────────────────────────────────────────────────
+// libheif needs the libde265 plugin to decode HEIC. If it isn't available (local
+// dev, older Docker image), fall back to FFmpeg which handles HEIC via its own
+// HEVC decoder.
+
+const HEIC_MIMES = new Set(['image/heic', 'image/heif'])
+
+async function heicToJpeg(buffer) {
+  const inputPath = await writeTempFile(buffer)
+  const outputPath = inputPath + '.jpg'
+  try {
+    await execFileAsync('ffmpeg', [
+      '-i', inputPath,
+      '-vframes', '1',
+      '-q:v', '2',
+      '-y',
+      outputPath,
+    ], { timeout: COMPRESS_TIMEOUT_MS })
+    return await fs.readFile(outputPath)
+  } finally {
+    await removeTempFiles(inputPath, outputPath)
+  }
+}
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
+
+async function compressAudio(buffer, options = {}) {
+  const { quality = config.DEFAULT_QUALITY } = options
+  const bitrate = Math.round(32 + (quality / 100) * 288)
+
+  const inputPath = await writeTempFile(buffer)
+  const outputPath = inputPath + '.m4a'
+
+  try {
+    await execFileAsync('ffmpeg', [
+      '-i', inputPath,
+      '-c:a', 'aac',
+      '-b:a', `${bitrate}k`,
+      '-vn',
+      '-y',
+      outputPath,
+    ], { timeout: COMPRESS_TIMEOUT_MS })
+
+    const output = await fs.readFile(outputPath)
+    return { buffer: output, mime: 'audio/mp4' }
+  } finally {
+    await removeTempFiles(inputPath, outputPath)
+  }
+}
+
+// ─── Video ────────────────────────────────────────────────────────────────────
+
+async function convertVideo(buffer, options = {}) {
+  const { quality = config.DEFAULT_QUALITY } = options
+  const crf = Math.round(28 - (quality / 100) * 10)
+
+  const inputPath = await writeTempFile(buffer)
+  const outputPath = inputPath + '.mp4'
+
+  try {
+    await execFileAsync('ffmpeg', [
+      '-i', inputPath,
+      '-c:v', 'libx264',
+      '-crf', String(crf),
+      '-preset', 'medium',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      '-y',
+      outputPath,
+    ], { timeout: COMPRESS_TIMEOUT_MS })
+
+    const output = await fs.readFile(outputPath)
+    return { buffer: output, mime: 'video/mp4' }
+  } finally {
+    await removeTempFiles(inputPath, outputPath)
+  }
+}
+
+// ─── PDF ──────────────────────────────────────────────────────────────────────
+
+function pdfPreset(quality) {
+  if (quality >= 75) return 'printer'
+  if (quality >= 40) return 'ebook'
+  return 'screen'
+}
+
+async function compressPdf(buffer, options = {}) {
+  const { quality = config.DEFAULT_QUALITY } = options
+  const preset = pdfPreset(quality)
+
+  const inputPath = await writeTempFile(buffer, '.pdf')
+  const outputPath = inputPath.replace('.pdf', '-out.pdf')
+
+  try {
+    await execFileAsync('gs', [
+      '-sDEVICE=pdfwrite',
+      '-dCompatibilityLevel=1.4',
+      `-dPDFSETTINGS=/${preset}`,
+      '-dNOPAUSE',
+      '-dQUIET',
+      '-dBATCH',
+      `-sOutputFile=${outputPath}`,
+      inputPath,
+    ], { timeout: COMPRESS_TIMEOUT_MS })
+
+    const output = await fs.readFile(outputPath)
+    return { buffer: output, mime: 'application/pdf' }
+  } finally {
+    await removeTempFiles(inputPath, outputPath)
+  }
+}
+
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 
 app.use((req, res, next) => {
@@ -153,40 +302,73 @@ app.use((req, res, next) => {
   next()
 })
 
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/index.html'))
 })
 
 app.use(express.static(path.join(__dirname, '../client')))
 
+// ─── /compress/one ────────────────────────────────────────────────────────────
 
 app.post('/compress/one', compressTimeout, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'file required' })
 
-    const rawFormat = String(req.query.format || 'webp')
-    const format   = rawFormat === 'auto'
-      ? (MIME_TO_FORMAT[req.file.mimetype] ?? 'webp')
-      : rawFormat
-    const quality  = parseNumber(req.query.quality, 80)
-    const width    = parseNumber(req.query.width, 1600)
+    const mime     = req.file.mimetype
     const origSize = req.file.buffer.length
+    const name     = req.file.originalname
+    const quality  = parseNumber(req.query.quality, config.DEFAULT_QUALITY)
+    const width    = parseNumber(req.query.width, config.DEFAULT_WIDTH)
+
+    // Per-type size validation
+    const isVideo = VIDEO_MIMES.has(mime)
+    const maxMB   = isVideo ? config.MAX_VIDEO_FILE_SIZE_MB : config.MAX_FILE_SIZE_MB
+    if (origSize > maxMB * 1024 * 1024) {
+      return res.json({ name, originalSize: origSize, error: true, message: `File too large (max ${maxMB} MB for this type)` })
+    }
 
     try {
-      const { buffer, mime } = await compressImage(req.file.buffer, { format, quality, width })
+      let result
+
+      if (AUDIO_MIMES.has(mime)) {
+        result = await compressAudio(req.file.buffer, { quality })
+      } else if (isVideo) {
+        result = await convertVideo(req.file.buffer, { quality })
+      } else if (mime === 'application/pdf') {
+        result = await compressPdf(req.file.buffer, { quality })
+      } else {
+        let imgBuffer = req.file.buffer
+        let imgMime   = mime
+
+        // HEIC/HEIF: try Sharp first (works when libde265 is installed);
+        // if libheif reports a codec error, re-decode via FFmpeg and retry.
+        if (HEIC_MIMES.has(mime)) {
+          try {
+            await sharp(imgBuffer, { failOn: 'none' }).metadata()
+          } catch {
+            imgBuffer = await heicToJpeg(imgBuffer)
+            imgMime   = 'image/jpeg'
+          }
+        }
+
+        const rawFormat = String(req.query.format || 'webp')
+        const format = rawFormat === 'auto' ? (MIME_TO_FORMAT[imgMime] ?? 'webp') : rawFormat
+        result = await compressImage(imgBuffer, { format, quality, width })
+      }
+
+      const { buffer, mime: outMime } = result
       return res.json({
-        name: req.file.originalname,
-        mime,
+        name,
+        mime: outMime,
         originalSize: origSize,
         compressedSize: buffer.length,
         savedBytes: origSize - buffer.length,
         ratio: Number(((1 - buffer.length / origSize) * 100).toFixed(1)),
         data: buffer.toString('base64'),
-        error: false
+        error: false,
       })
     } catch (err) {
-      return res.json({ name: req.file.originalname, originalSize: origSize, error: true, message: err.message })
+      return res.json({ name, originalSize: origSize, error: true, message: err.message })
     }
   } catch (err) {
     console.error(err)
@@ -197,16 +379,12 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 const PORT = config.PORT
-const serverTimeout = config.SERVER_TIMEOUT_MS
-const keepAliveTimeout = config.KEEP_ALIVE_TIMEOUT_MS
-const headersTimeout = config.HEADERS_TIMEOUT_MS
-
 const server = http.createServer(app)
 
-server.timeout          = serverTimeout
-server.keepAliveTimeout = keepAliveTimeout
-server.headersTimeout   = headersTimeout
+server.timeout          = config.SERVER_TIMEOUT_MS
+server.keepAliveTimeout = config.KEEP_ALIVE_TIMEOUT_MS
+server.headersTimeout   = config.HEADERS_TIMEOUT_MS
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`image service running on :${PORT} (request timeout: ${server.timeout / 1000}s)`)
+  console.log(`imgpress running on :${PORT} (timeout: ${server.timeout / 1000}s)`)
 })

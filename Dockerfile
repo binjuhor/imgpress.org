@@ -9,7 +9,7 @@ RUN npm ci
 FROM node:20-alpine
 WORKDIR /app
 
-RUN apk add --no-cache tini
+RUN apk add --no-cache tini ffmpeg ghostscript libde265
 
 COPY --from=builder /app/node_modules ./server/node_modules
 

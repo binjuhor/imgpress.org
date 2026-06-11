@@ -92,13 +92,28 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFiles([...e.dataTransfer.files]) })
   fileInput.addEventListener('change', () => { handleFiles([...fileInput.files]); fileInput.value = '' })
  
+  function fileCategory(file) {
+    if (file.type.startsWith('image/')) return 'image'
+    if (file.type.startsWith('audio/')) return 'audio'
+    if (file.type.startsWith('video/')) return 'video'
+    if (file.type === 'application/pdf') return 'pdf'
+    return null
+  }
+
+  function fileIcon(category) {
+    if (category === 'audio') return '♪'
+    if (category === 'video') return '▶'
+    if (category === 'pdf')   return 'PDF'
+    return '?'
+  }
+
   function handleFiles(newFiles) {
-    const imgs = newFiles.filter(f => f.type.startsWith('image/')).slice(0, 20 - items.length)
-    if (!imgs.length) return
- 
-    imgs.forEach(file => {
+    const supported = newFiles.filter(f => fileCategory(f) !== null).slice(0, 20 - items.length)
+    if (!supported.length) return
+
+    supported.forEach(file => {
       const id = uid()
-      const item = { id, file, originalSize: file.size }
+      const item = { id, file, originalSize: file.size, category: fileCategory(file) }
       items.unshift(item)
       prependCard(item)
       enqueue(id, file)
@@ -107,16 +122,27 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
  
   // ── Card DOM ──────────────────────────────────────────────────────────────────
  
-  function prependCard({ id, file, originalSize }) {
+  function prependCard({ id, file, originalSize, category }) {
   const card = document.createElement('div')
   card.className = 'file-card'
   card.id = 'card-' + id
 
-  const thumb = document.createElement('img')
-  thumb.className = 'file-thumb'
-  const thumbUrl = URL.createObjectURL(file)
-  thumb.src = thumbUrl
-  thumb.alt = ''
+  const isImage = category === 'image'
+  let thumbUrl = null
+
+  let thumbEl
+  if (isImage) {
+    thumbUrl = URL.createObjectURL(file)
+    thumbEl = document.createElement('img')
+    thumbEl.className = 'file-thumb'
+    thumbEl.src = thumbUrl
+    thumbEl.alt = ''
+  } else {
+    thumbEl = document.createElement('div')
+    thumbEl.className = 'file-thumb file-icon'
+    thumbEl.textContent = fileIcon(category)
+    thumbEl.dataset.category = category
+  }
 
   const info = document.createElement('div')
   info.className = 'file-info'
@@ -130,28 +156,8 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
       <span class="badge badge-working">Optimising…</span>
     </div>`
 
-  const compareWrap = document.createElement('div')
-  compareWrap.className = 'compare-wrap'
-  compareWrap.id = 'cmp-' + id
-  compareWrap.style.height = '200px'
-  compareWrap.innerHTML = `
-    <div class="compare-before" id="cmp-before-${id}"></div>
-    <div class="compare-after" id="cmp-after-${id}"></div>
-    <div class="compare-divider" id="cmp-div-${id}"></div>
-    <div class="compare-handle" id="cmp-hdl-${id}"></div>
-    <span class="compare-label compare-label-before">Original</span>
-    <span class="compare-label compare-label-after">Compressed</span>`
-
   const actions = document.createElement('div')
   actions.className = 'card-actions'
-
-  const cmpBtn = document.createElement('button')
-  cmpBtn.className = 'icon-btn comp'
-  cmpBtn.id = 'cmp-btn-' + id
-  cmpBtn.title = 'Compare'
-  cmpBtn.innerHTML = '⇄'
-  cmpBtn.disabled = true
-  cmpBtn.addEventListener('click', () => toggleCompare(id))
 
   const dlBtn = document.createElement('button')
   dlBtn.className = 'icon-btn dl'
@@ -167,16 +173,42 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   rmBtn.innerHTML = '×'
   rmBtn.addEventListener('click', () => removeCard(id))
 
-  actions.append(cmpBtn, dlBtn, rmBtn)
-  card.append(thumb, info, actions)
-  card.style.flexWrap = 'wrap'
-  compareWrap.style.width = '100%'
-  compareWrap.style.marginTop = '10px'
-  card.append(compareWrap)
+  if (isImage) {
+    const cmpBtn = document.createElement('button')
+    cmpBtn.className = 'icon-btn comp'
+    cmpBtn.id = 'cmp-btn-' + id
+    cmpBtn.title = 'Compare'
+    cmpBtn.innerHTML = '⇄'
+    cmpBtn.disabled = true
+    cmpBtn.addEventListener('click', () => toggleCompare(id))
+    actions.append(cmpBtn)
+  }
 
-  fileList.prepend(card)
-  document.getElementById('cmp-before-' + id).style.backgroundImage = `url('${thumbUrl}')`
-  initCompareDrag(id, compareWrap)
+  actions.append(dlBtn, rmBtn)
+  card.append(thumbEl, info, actions)
+
+  if (isImage) {
+    const compareWrap = document.createElement('div')
+    compareWrap.className = 'compare-wrap'
+    compareWrap.id = 'cmp-' + id
+    compareWrap.style.height = '200px'
+    compareWrap.innerHTML = `
+      <div class="compare-before" id="cmp-before-${id}"></div>
+      <div class="compare-after" id="cmp-after-${id}"></div>
+      <div class="compare-divider" id="cmp-div-${id}"></div>
+      <div class="compare-handle" id="cmp-hdl-${id}"></div>
+      <span class="compare-label compare-label-before">Original</span>
+      <span class="compare-label compare-label-after">Compressed</span>`
+    card.style.flexWrap = 'wrap'
+    compareWrap.style.width = '100%'
+    compareWrap.style.marginTop = '10px'
+    card.append(compareWrap)
+    fileList.prepend(card)
+    document.getElementById('cmp-before-' + id).style.backgroundImage = `url('${thumbUrl}')`
+    initCompareDrag(id, compareWrap)
+  } else {
+    fileList.prepend(card)
+  }
 }
 
 function toggleCompare(id) {
@@ -253,9 +285,9 @@ function initCompareDrag(id, wrap) {
  
       const item = items.find(it => it.id === id)
       r.originalSize = item ? item.originalSize : r.originalSize
- 
+
       results[id] = r
- 
+
       const pb = document.getElementById('pb-' + id)
       const st = document.getElementById('st-' + id)
       const dl = document.getElementById('dl-' + id)
@@ -263,17 +295,17 @@ function initCompareDrag(id, wrap) {
       if (st) st.innerHTML = statusHtml(r)
       const pct = Math.round((1 - r.compressedSize / r.originalSize) * 100)
       if (dl && !r.error && pct > 0) dl.disabled = false
-if (!r.error && pct > 0 && r.data) {
-  const cmpBtn = document.getElementById('cmp-btn-' + id)
-  if (cmpBtn) cmpBtn.disabled = false
-  const mime = r.mime || 'image/webp'
-  const byteStr = atob(r.data)
-  const arr = new Uint8Array(byteStr.length)
-  for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j)
-  const compUrl = URL.createObjectURL(new Blob([arr], { type: mime }))
-  const afterEl = document.getElementById('cmp-after-' + id)
-  if (afterEl) afterEl.style.backgroundImage = `url('${compUrl}')`
-}
+      if (!r.error && pct > 0 && r.data && item?.category === 'image') {
+        const cmpBtn = document.getElementById('cmp-btn-' + id)
+        if (cmpBtn) cmpBtn.disabled = false
+        const mime = r.mime || 'image/webp'
+        const byteStr = atob(r.data)
+        const arr = new Uint8Array(byteStr.length)
+        for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j)
+        const compUrl = URL.createObjectURL(new Blob([arr], { type: mime }))
+        const afterEl = document.getElementById('cmp-after-' + id)
+        if (afterEl) afterEl.style.backgroundImage = `url('${compUrl}')`
+      }
     } catch (err) {
       const pb = document.getElementById('pb-' + id)
       const st = document.getElementById('st-' + id)
@@ -326,14 +358,25 @@ if (!r.error && pct > 0 && r.data) {
  
   // ── Download single ───────────────────────────────────────────────────────────
  
+  function mimeToExt(mime, fallback) {
+    const map = {
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+      'image/avif': 'avif', 'image/gif': 'gif',
+      'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg',
+      'video/mp4': 'mp4',
+      'application/pdf': 'pdf',
+    }
+    return map[mime] || mime.split('/')[1] || fallback || 'bin'
+  }
+
   function downloadSingle(id) {
     const r = results[id]
     if (!r || r.error || !r.data) return
     const item = items.find(it => it.id === id)
-    const mime = r.mime || 'image/webp'
-    const ext  = mime.split('/')[1] || fmt
-    const base = (item?.file.name || 'image').replace(/\.[^.]+$/, '')
- 
+    const mime = r.mime || 'application/octet-stream'
+    const ext  = mimeToExt(mime, fmt)
+    const base = (item?.file.name || 'file').replace(/\.[^.]+$/, '')
+
     const byteStr = atob(r.data)
     const arr = new Uint8Array(byteStr.length)
     for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j)
@@ -365,7 +408,7 @@ if (!r.error && pct > 0 && r.data) {
       for (const it of compressible) {
         const r = results[it.id]
         const mime = r.mime || 'image/webp'
-        const ext  = mime.split('/')[1] || fmt
+        const ext  = mimeToExt(mime, fmt)
         const base = it.file.name.replace(/\.[^.]+$/, '')
         const byteStr = atob(r.data)
         const arr = new Uint8Array(byteStr.length)

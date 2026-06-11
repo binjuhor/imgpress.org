@@ -44,6 +44,37 @@ body::after {
   color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase;
 }
 
+/* ── Supported types list ──────────────────────────────────────────────────── */
+
+.supported-types {
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 14px 0 4px;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 14px 16px;
+}
+
+.stype {
+  display: flex; align-items: baseline; gap: 10px;
+  font-size: 0.68rem; color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.stype-label {
+  font-size: 0.6rem; font-weight: 500;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px;
+  flex-shrink: 0; white-space: nowrap;
+}
+
+.stype--image .stype-label { background: rgba(58,58,56,0.08);   color: var(--fg); }
+.stype--audio .stype-label { background: rgba(232,93,42,0.1);   color: var(--accent); }
+.stype--video .stype-label { background: rgba(45,138,78,0.12);  color: var(--success); }
+.stype--pdf   .stype-label { background: rgba(196,61,61,0.1);   color: var(--error); }
+
+.stype-formats { line-height: 1.5; }
+
 #drop-zone {
   border: 1.5px dashed var(--card-border);
   border-radius: var(--radius);
@@ -135,6 +166,15 @@ select {
   border-radius: 8px; object-fit: cover; flex-shrink: 0;
   background: var(--bg); border: 1.5px solid var(--card-border);
 }
+
+.file-icon {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 500; letter-spacing: 0.02em;
+  color: var(--muted); user-select: none;
+}
+.file-icon[data-category="audio"] { background: rgba(232,93,42,0.07); color: var(--accent); }
+.file-icon[data-category="video"] { background: rgba(45,138,78,0.07);  color: var(--success); }
+.file-icon[data-category="pdf"]   { background: rgba(196,61,61,0.07);  color: var(--error); }
 
 .file-info { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
 .file-name {
@@ -342,4 +382,5 @@ select {
   .pill { flex:1; text-align: center; }
   .quality-wrap { flex: 1; }
   input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+  .stype { flex-wrap: wrap; }
 }

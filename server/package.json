@@ -9,6 +9,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "multer": "^2.0.0",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "fluent-ffmpeg": "^2.1.3"
   }
 }

@@ -188,8 +188,8 @@ async function compressImage(buffer, options = {}) {
 const HEIC_MIMES = new Set(['image/heic', 'image/heif'])
 
 async function heicToJpeg(buffer) {
-  const inputPath = await writeTempFile(buffer)
-  const outputPath = inputPath + '.jpg'
+  const inputPath  = await writeTempFile(buffer, '.heic')
+  const outputPath = inputPath.replace('.heic', '.jpg')
   try {
     await execFileAsync('ffmpeg', [
       '-i', inputPath,
@@ -340,15 +340,13 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
         let imgBuffer = req.file.buffer
         let imgMime   = mime
 
-        // HEIC/HEIF: try Sharp first (works when libde265 is installed);
-        // if libheif reports a codec error, re-decode via FFmpeg and retry.
+        // HEIC/HEIF: always pre-convert via FFmpeg.
+        // sharp().metadata() with failOn:'none' never throws even when libheif
+        // lacks the HEVC codec, so a probe-based fallback never fires. FFmpeg
+        // uses its own internal HEVC decoder and reliably handles HEIC.
         if (HEIC_MIMES.has(mime)) {
-          try {
-            await sharp(imgBuffer, { failOn: 'none' }).metadata()
-          } catch {
-            imgBuffer = await heicToJpeg(imgBuffer)
-            imgMime   = 'image/jpeg'
-          }
+          imgBuffer = await heicToJpeg(imgBuffer)
+          imgMime   = 'image/jpeg'
         }
 
         const rawFormat = String(req.query.format || 'webp')

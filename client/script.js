@@ -107,13 +107,27 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
     return '?'
   }
 
+  const BROWSER_RENDERABLE = new Set([
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+    'image/webp', 'image/avif', 'image/svg+xml', 'image/bmp',
+  ])
+
+  function canPreview(file) {
+    return BROWSER_RENDERABLE.has(file.type)
+  }
+
+  function imageExtIcon(file) {
+    return file.name.split('.').pop().toUpperCase().slice(0, 4) || 'IMG'
+  }
+
   function handleFiles(newFiles) {
     const supported = newFiles.filter(f => fileCategory(f) !== null).slice(0, 20 - items.length)
     if (!supported.length) return
 
     supported.forEach(file => {
-      const id = uid()
-      const item = { id, file, originalSize: file.size, category: fileCategory(file) }
+      const id       = uid()
+      const category = fileCategory(file)
+      const item     = { id, file, originalSize: file.size, category, previewable: category === 'image' && canPreview(file) }
       items.unshift(item)
       prependCard(item)
       enqueue(id, file)
@@ -122,7 +136,7 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
  
   // ── Card DOM ──────────────────────────────────────────────────────────────────
  
-  function prependCard({ id, file, originalSize, category }) {
+  function prependCard({ id, file, originalSize, category, previewable }) {
   const card = document.createElement('div')
   card.className = 'file-card'
   card.id = 'card-' + id
@@ -131,7 +145,7 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   let thumbUrl = null
 
   let thumbEl
-  if (isImage) {
+  if (previewable) {
     thumbUrl = URL.createObjectURL(file)
     thumbEl = document.createElement('img')
     thumbEl.className = 'file-thumb'
@@ -140,7 +154,7 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   } else {
     thumbEl = document.createElement('div')
     thumbEl.className = 'file-thumb file-icon'
-    thumbEl.textContent = fileIcon(category)
+    thumbEl.textContent = isImage ? imageExtIcon(file) : fileIcon(category)
     thumbEl.dataset.category = category
   }
 
@@ -173,7 +187,7 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   rmBtn.innerHTML = '×'
   rmBtn.addEventListener('click', () => removeCard(id))
 
-  if (isImage) {
+  if (previewable) {
     const cmpBtn = document.createElement('button')
     cmpBtn.className = 'icon-btn comp'
     cmpBtn.id = 'cmp-btn-' + id
@@ -187,7 +201,7 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   actions.append(dlBtn, rmBtn)
   card.append(thumbEl, info, actions)
 
-  if (isImage) {
+  if (previewable) {
     const compareWrap = document.createElement('div')
     compareWrap.className = 'compare-wrap'
     compareWrap.id = 'cmp-' + id
@@ -295,7 +309,7 @@ function initCompareDrag(id, wrap) {
       if (st) st.innerHTML = statusHtml(r)
       const pct = Math.round((1 - r.compressedSize / r.originalSize) * 100)
       if (dl && !r.error && pct > 0) dl.disabled = false
-      if (!r.error && pct > 0 && r.data && item?.category === 'image') {
+      if (!r.error && pct > 0 && r.data && item?.previewable) {
         const cmpBtn = document.getElementById('cmp-btn-' + id)
         if (cmpBtn) cmpBtn.disabled = false
         const mime = r.mime || 'image/webp'

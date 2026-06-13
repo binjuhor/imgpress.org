@@ -21,4 +21,5 @@ services:
       - DITHER_MAX=0.7
       - DITHER_MIN=0.3
       - SHARP_CONCURRENCY=0
+      - JOB_TTL_MS=3600000
     restart: unless-stopped

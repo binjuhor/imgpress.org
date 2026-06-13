@@ -11,7 +11,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { fileURLToPath } from 'url'
 
-dotenv.config()
+dotenv.config({ quiet: true })
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const execFileAsync = promisify(execFile)
@@ -34,6 +34,7 @@ const config = {
   DITHER_MAX: parseFloat(process.env.DITHER_MAX || '0.7'),
   DITHER_MIN: parseFloat(process.env.DITHER_MIN || '0.3'),
   SHARP_CONCURRENCY: parseInt(process.env.SHARP_CONCURRENCY || '0'),
+  JOB_TTL_MS: parseInt(process.env.JOB_TTL_MS || '3600000'),
 }
 
 const app = express()
@@ -293,6 +294,37 @@ async function compressPdf(buffer, options = {}) {
   }
 }
 
+// ─── API job store (in-memory, TTL-based) ─────────────────────────────────────
+
+const jobStore = new Map()
+
+function storeJob(id, data) {
+  jobStore.set(id, { ...data, expiresAt: Date.now() + config.JOB_TTL_MS })
+}
+
+function getJob(id) {
+  const job = jobStore.get(id)
+  if (!job) return null
+  if (Date.now() > job.expiresAt) {
+    jobStore.delete(id)
+    return null
+  }
+  return job
+}
+
+setInterval(() => {
+  const now = Date.now()
+  for (const [id, job] of jobStore) {
+    if (now > job.expiresAt) jobStore.delete(id)
+  }
+}, 600_000)
+
+const MIME_TO_EXT = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'image/avif': 'avif', 'image/gif': 'gif',
+  'audio/mp4': 'm4a', 'video/mp4': 'mp4', 'application/pdf': 'pdf',
+}
+
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 
 app.use((req, res, next) => {
@@ -372,6 +404,104 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
     console.error(err)
     return res.status(500).json({ error: 'compress failed' })
   }
+})
+
+// ─── /api/compress ────────────────────────────────────────────────────────────
+// External API: upload one or more files, get back download URLs.
+//
+// POST /api/compress
+//   Content-Type: multipart/form-data
+//   Field:        files  (one or more files)
+//   Query params: quality (1-100), width (px, images only), format (webp|avif|jpeg|png|gif|auto)
+//
+// Response: { results: [{ id, name, mime, originalSize, compressedSize, savedBytes, ratio, downloadUrl }] }
+
+async function compressOne(file, options) {
+  const { quality, width, format } = options
+  const mime     = file.mimetype
+  const origSize = file.buffer.length
+  const name     = file.originalname
+
+  const isVideo = VIDEO_MIMES.has(mime)
+  const maxMB   = isVideo ? config.MAX_VIDEO_FILE_SIZE_MB : config.MAX_FILE_SIZE_MB
+  if (origSize > maxMB * 1024 * 1024) {
+    return { name, originalSize: origSize, error: true, message: `File too large (max ${maxMB} MB for this type)` }
+  }
+
+  try {
+    let result
+
+    if (AUDIO_MIMES.has(mime)) {
+      result = await compressAudio(file.buffer, { quality })
+    } else if (isVideo) {
+      result = await convertVideo(file.buffer, { quality })
+    } else if (mime === 'application/pdf') {
+      result = await compressPdf(file.buffer, { quality })
+    } else {
+      let imgBuffer = file.buffer
+      let imgMime   = mime
+
+      if (HEIC_MIMES.has(mime)) {
+        imgBuffer = await heicToPng(imgBuffer)
+        imgMime   = 'image/png'
+      }
+
+      const resolvedFormat = format === 'auto' ? (MIME_TO_FORMAT[imgMime] ?? 'webp') : format
+      result = await compressImage(imgBuffer, { format: resolvedFormat, quality, width })
+    }
+
+    const id  = crypto.randomUUID()
+    const ext = MIME_TO_EXT[result.mime] ?? 'bin'
+    const baseName = path.basename(name, path.extname(name))
+    storeJob(id, { buffer: result.buffer, mime: result.mime, filename: `${baseName}.${ext}` })
+
+    return {
+      name,
+      id,
+      mime: result.mime,
+      originalSize: origSize,
+      compressedSize: result.buffer.length,
+      savedBytes: origSize - result.buffer.length,
+      ratio: Number(((1 - result.buffer.length / origSize) * 100).toFixed(1)),
+      downloadUrl: `/api/download/${id}`,
+      error: false,
+    }
+  } catch (err) {
+    return { name, originalSize: origSize, error: true, message: err.message }
+  }
+}
+
+app.post('/api/compress', compressTimeout, upload.array('files', config.MAX_FILES), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'files field required (multipart/form-data)' })
+    }
+
+    const quality = parseNumber(req.query.quality, config.DEFAULT_QUALITY)
+    const width   = parseNumber(req.query.width, config.DEFAULT_WIDTH)
+    const format  = String(req.query.format || 'webp')
+
+    const results = await Promise.all(req.files.map(f => compressOne(f, { quality, width, format })))
+    return res.json({ results })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'compress failed' })
+  }
+})
+
+// ─── /api/download/:id ────────────────────────────────────────────────────────
+// Download a compressed file by job ID. Deleted from store after first download.
+
+app.get('/api/download/:id', (req, res) => {
+  const job = getJob(req.params.id)
+  if (!job) return res.status(404).json({ error: 'file not found or expired' })
+
+  res.setHeader('Content-Type', job.mime)
+  res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`)
+  res.setHeader('Content-Length', job.buffer.length)
+  res.send(job.buffer)
+
+  jobStore.delete(req.params.id)
 })
 
 // ─── Start ────────────────────────────────────────────────────────────────────

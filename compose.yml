@@ -26,5 +26,5 @@ services:
     networks:
       - caddy
 networks:
-  name: caddy
-  external: true
+  caddy:
+    external: true

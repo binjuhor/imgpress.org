@@ -23,3 +23,8 @@ services:
       - SHARP_CONCURRENCY=0
       - JOB_TTL_MS=3600000
     restart: unless-stopped
+    networks:
+      - caddy
+networks:
+  name: caddy
+  external: true

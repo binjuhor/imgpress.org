@@ -126,6 +126,9 @@ const MIME_TO_FORMAT = {
   'image/heic': 'jpeg', 'image/heif': 'jpeg',
 }
 
+// Formats that cannot be meaningfully compressed — return as-is
+const PASSTHROUGH_MIMES = new Set(['image/svg+xml'])
+
 const AUDIO_MIMES = new Set([
   'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
   'audio/flac', 'audio/x-flac', 'audio/ogg', 'audio/aac',
@@ -476,7 +479,15 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
     try {
       let result
 
-      if (AUDIO_MIMES.has(mime)) {
+      if (PASSTHROUGH_MIMES.has(mime)) {
+        return res.json({
+          name, mime,
+          originalSize: origSize, compressedSize: origSize,
+          savedBytes: 0, ratio: 0,
+          data: req.file.buffer.toString('base64'),
+          error: false,
+        })
+      } else if (AUDIO_MIMES.has(mime)) {
         result = await compressAudio(req.file.buffer, { quality })
       } else if (isVideo) {
         result = await convertVideo(req.file.buffer, { quality })
@@ -545,7 +556,18 @@ async function compressOne(file, options) {
   try {
     let result
 
-    if (AUDIO_MIMES.has(mime)) {
+    if (PASSTHROUGH_MIMES.has(mime)) {
+      const id  = crypto.randomUUID()
+      const ext = name.split('.').pop() ?? 'bin'
+      storeJob(id, { buffer: file.buffer, mime, filename: `${path.basename(name, path.extname(name))}.${ext}` })
+      return {
+        name, id, mime,
+        originalSize: origSize, compressedSize: origSize,
+        savedBytes: 0, ratio: 0,
+        downloadUrl: `/api/download/${id}`,
+        error: false,
+      }
+    } else if (AUDIO_MIMES.has(mime)) {
       result = await compressAudio(file.buffer, { quality })
     } else if (isVideo) {
       result = await convertVideo(file.buffer, { quality })

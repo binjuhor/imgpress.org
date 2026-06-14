@@ -15,7 +15,7 @@ jobs:
       - name: Sync files to server
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avz --delete --exclude='.git' --exclude='server/node_modules' --exclude='server/.env' --exclude='.env'
+          switches: -avz --delete --exclude='.git' --exclude='server/node_modules' --exclude='server/.env' --exclude='.env' --exclude='db-data'
           path: ./
           remote_path: ${{ secrets.DEPLOY_PATH }}
           remote_host: ${{ secrets.SSH_HOST }}
@@ -32,5 +32,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            docker compose down -v
+            docker compose down
             docker compose up -d --build

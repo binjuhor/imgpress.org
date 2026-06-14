@@ -10,6 +10,7 @@ import crypto from 'crypto'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { fileURLToPath } from 'url'
+import mysql from 'mysql2/promise'
 
 dotenv.config({ quiet: true })
 
@@ -34,7 +35,70 @@ const config = {
   DITHER_MAX: parseFloat(process.env.DITHER_MAX || '0.7'),
   DITHER_MIN: parseFloat(process.env.DITHER_MIN || '0.3'),
   SHARP_CONCURRENCY: parseInt(process.env.SHARP_CONCURRENCY || '0'),
-  JOB_TTL_MS: parseInt(process.env.JOB_TTL_MS || '3600000'),
+  JOB_TTL_MS:  parseInt(process.env.JOB_TTL_MS  || '3600000'),
+  DB_HOST:     process.env.DB_HOST     || '',
+  DB_PORT:     parseInt(process.env.DB_PORT     || '3306'),
+  DB_USER:     process.env.DB_USER     || 'imgpress',
+  DB_PASSWORD: process.env.DB_PASSWORD || '',
+  DB_NAME:     process.env.DB_NAME     || 'imgpress',
+  ADMIN_KEY:   process.env.ADMIN_KEY   || '',
+}
+
+// ─── Database ─────────────────────────────────────────────────────────────────
+
+let db = null
+
+async function initDb() {
+  if (!config.DB_HOST) return
+  db = await mysql.createPool({
+    host:               config.DB_HOST,
+    port:               config.DB_PORT,
+    user:               config.DB_USER,
+    password:           config.DB_PASSWORD,
+    database:           config.DB_NAME,
+    waitForConnections: true,
+    connectionLimit:    10,
+  })
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS allowed_domains (
+      id         INT AUTO_INCREMENT PRIMARY KEY,
+      domain     VARCHAR(255) NOT NULL UNIQUE,
+      note       VARCHAR(500) DEFAULT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  console.log('[ImgPress] Database connected')
+}
+
+async function checkDomain(req, res, next) {
+  if (!db) return next()
+  const domain = (req.headers['x-site-domain'] || '').trim().toLowerCase()
+  if (!domain) {
+    return res.status(401).json({ error: 'X-Site-Domain header required' })
+  }
+  try {
+    const [rows] = await db.execute(
+      'SELECT id FROM allowed_domains WHERE domain = ?',
+      [domain]
+    )
+    if (rows.length === 0) {
+      return res.status(403).json({ error: `Domain not authorized: ${domain}` })
+    }
+    next()
+  } catch (err) {
+    console.error('[ImgPress] DB error in domain check:', err)
+    next()
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (!config.ADMIN_KEY) {
+    return res.status(503).json({ error: 'Admin panel not configured — set ADMIN_KEY' })
+  }
+  if (req.headers['x-admin-key'] !== config.ADMIN_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+  next()
 }
 
 const app = express()
@@ -329,7 +393,7 @@ const MIME_TO_EXT = {
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Site-Domain, X-Admin-Key')
   if (req.method === 'OPTIONS') return res.sendStatus(204)
   next()
 })
@@ -339,6 +403,56 @@ app.get('/', (req, res) => {
 })
 
 app.use(express.static(path.join(__dirname, '../client')))
+app.use(express.json())
+
+// ─── Admin panel ──────────────────────────────────────────────────────────────
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/admin.html'))
+})
+
+app.get('/api/admin/domains', requireAdmin, async (req, res) => {
+  if (!db) return res.json({ domains: [] })
+  try {
+    const [rows] = await db.execute(
+      'SELECT id, domain, note, created_at FROM allowed_domains ORDER BY created_at DESC'
+    )
+    res.json({ domains: rows })
+  } catch (err) {
+    console.error('[ImgPress] DB error:', err)
+    res.status(500).json({ error: 'Database error' })
+  }
+})
+
+app.post('/api/admin/domains', requireAdmin, async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Database not configured' })
+  const raw    = (req.body?.domain || '').replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim().toLowerCase()
+  if (!raw) return res.status(400).json({ error: 'domain is required' })
+  const note   = (req.body?.note || '').trim() || null
+  try {
+    await db.execute('INSERT INTO allowed_domains (domain, note) VALUES (?, ?)', [raw, note])
+    const [rows] = await db.execute(
+      'SELECT id, domain, note, created_at FROM allowed_domains WHERE domain = ?',
+      [raw]
+    )
+    res.json({ domain: rows[0] })
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Domain already exists' })
+    console.error('[ImgPress] DB error:', err)
+    res.status(500).json({ error: 'Database error' })
+  }
+})
+
+app.delete('/api/admin/domains/:id', requireAdmin, async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Database not configured' })
+  try {
+    await db.execute('DELETE FROM allowed_domains WHERE id = ?', [req.params.id])
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[ImgPress] DB error:', err)
+    res.status(500).json({ error: 'Database error' })
+  }
+})
 
 // ─── /compress/one ────────────────────────────────────────────────────────────
 
@@ -471,7 +585,7 @@ async function compressOne(file, options) {
   }
 }
 
-app.post('/api/compress', compressTimeout, upload.array('files', config.MAX_FILES), async (req, res) => {
+app.post('/api/compress', checkDomain, compressTimeout, upload.array('files', config.MAX_FILES), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'files field required (multipart/form-data)' })
@@ -513,6 +627,10 @@ server.timeout          = config.SERVER_TIMEOUT_MS
 server.keepAliveTimeout = config.KEEP_ALIVE_TIMEOUT_MS
 server.headersTimeout   = config.HEADERS_TIMEOUT_MS
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`imgpress running on :${PORT} (timeout: ${server.timeout / 1000}s)`)
-})
+initDb()
+  .catch(err => console.error('[ImgPress] DB init failed, domain checks disabled:', err))
+  .finally(() => {
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`imgpress running on :${PORT} (timeout: ${server.timeout / 1000}s)`)
+    })
+  })

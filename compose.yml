@@ -22,9 +22,45 @@ services:
       - DITHER_MIN=0.3
       - SHARP_CONCURRENCY=0
       - JOB_TTL_MS=3600000
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=imgpress
+      - DB_USER=imgpress
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - ADMIN_KEY=${ADMIN_KEY:-changeme}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - caddy
+      - internal
+
+  db:
+    image: mariadb:11
+    container_name: imgpress-db
+    environment:
+      MARIADB_DATABASE: imgpress
+      MARIADB_USER: imgpress
+      MARIADB_PASSWORD: ${DB_PASSWORD:-changeme}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-changeme_root}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - internal
+
+volumes:
+  db-data:
+
 networks:
   caddy:
     external: true
+  internal:
+    driver: bridge

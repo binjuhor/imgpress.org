@@ -3,96 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImgPress — Admin</title>
+  <title>ImgPress — Admin Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <style>
+    .admin-page { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .admin-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--fg);
+    }
+
+    .admin-logo h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin: 0;
+    }
+
+    .admin-logo h2 em { font-style: italic; color: var(--accent); }
+
+    .admin-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: rgba(232, 93, 42, 0.1);
+      color: var(--accent);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
     .adm-card {
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: var(--radius);
-      padding: 28px 32px;
-      margin-bottom: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
     }
+
+    .adm-card:hover { box-shadow: var(--shadow-md); }
 
     .adm-label {
       font-size: 0.7rem;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 14px;
+      margin-bottom: 16px;
+      font-weight: 500;
     }
 
     .adm-row {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
       flex-wrap: wrap;
     }
 
     .adm-input {
       font-family: 'DM Mono', monospace;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       background: var(--bg);
       border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 9px 14px;
+      border-radius: 10px;
+      padding: 12px 16px;
       color: var(--fg);
       flex: 1;
       min-width: 180px;
-      transition: border-color 0.15s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .adm-input:focus {
       outline: none;
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232, 93, 42, 0.1);
     }
 
-    .adm-input--note { max-width: 220px; }
+    .adm-input--note { max-width: 240px; }
 
     .adm-btn {
       font-family: 'DM Mono', monospace;
-      font-size: 0.82rem;
+      font-size: 0.9rem;
       background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: 8px;
-      padding: 9px 18px;
+      border-radius: 10px;
+      padding: 12px 24px;
       cursor: pointer;
       white-space: nowrap;
-      transition: background 0.15s;
+      transition: all 0.2s;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: var(--shadow-sm);
     }
 
-    .adm-btn:hover { background: var(--accent-hover); }
-    .adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .adm-btn:hover {
+      background: var(--accent-hover);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .adm-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
 
     .adm-err {
-      font-size: 0.78rem;
+      font-size: 0.85rem;
       color: var(--error);
-      margin-top: 10px;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(220, 38, 38, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+
+    .adm-success {
+      font-size: 0.85rem;
+      color: var(--success);
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(5, 150, 105, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(5, 150, 105, 0.2);
     }
 
     .adm-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 16px;
-      font-size: 0.82rem;
+      margin-top: 20px;
+      font-size: 0.9rem;
     }
 
     .adm-table th {
-      font-size: 0.68rem;
+      font-size: 0.75rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--muted);
       text-align: left;
-      padding: 0 12px 10px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--card-border);
+      font-weight: 500;
     }
 
     .adm-table td {
-      padding: 12px;
+      padding: 14px 16px;
       border-bottom: 1px solid var(--card-border);
       font-family: 'DM Mono', monospace;
       vertical-align: middle;
@@ -100,90 +174,171 @@
 
     .adm-table tr:last-child td { border-bottom: none; }
 
+    .adm-table tr:hover {
+      background: var(--bg);
+    }
+
     .adm-domain { font-weight: 500; color: var(--fg); }
-    .adm-note   { color: var(--muted); font-size: 0.78rem; }
-    .adm-date   { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+    .adm-note { color: var(--muted); font-size: 0.85rem; }
+    .adm-date { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
 
     .adm-del {
       font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       background: none;
       border: 1px solid var(--card-border);
-      border-radius: 6px;
+      border-radius: 8px;
       color: var(--error);
-      padding: 4px 10px;
+      padding: 6px 12px;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: all 0.2s;
+      font-weight: 500;
     }
 
-    .adm-del:hover { background: #fff0f0; border-color: var(--error); }
-    .adm-del:disabled { opacity: 0.4; cursor: not-allowed; }
+    .adm-del:hover {
+      background: rgba(220, 38, 38, 0.05);
+      border-color: var(--error);
+    }
+
+    .adm-del:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
     .adm-empty {
-      font-size: 0.82rem;
+      font-size: 0.95rem;
       color: var(--muted);
-      margin-top: 12px;
-      padding: 16px;
+      margin-top: 20px;
+      padding: 24px;
       background: var(--bg);
-      border-radius: 8px;
+      border-radius: 10px;
       text-align: center;
+      border: 1px solid var(--card-border);
     }
 
     .adm-count {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       color: var(--muted);
-      margin-left: 6px;
+      margin-left: 8px;
     }
 
     .adm-back {
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       color: var(--muted);
       text-decoration: none;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       margin-bottom: 32px;
+      transition: color 0.2s;
     }
 
     .adm-back:hover { color: var(--accent); }
+
+    .auth-gate-card { border: 2px solid var(--card-border); }
+
+    .admin-section-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.8rem;
+      font-weight: 400;
+      margin-bottom: 24px;
+      color: var(--fg);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--success);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+      .admin-page { padding: 24px 16px 60px; }
+      .admin-header { flex-direction: column; gap: 16px; }
+      .adm-row { flex-direction: column; }
+      .adm-input { width: 100%; }
+      .adm-btn { width: 100%; }
+      .adm-table { font-size: 0.8rem; }
+      .adm-table th, .adm-table td { padding: 10px 12px; }
+    }
   </style>
 </head>
 <body>
-<div class="page">
+<div class="admin-page">
 
-  <a href="/" class="adm-back">← Back to ImgPress</a>
-
-  <div class="brand">
-    <h1>Img<em>Press</em></h1>
-    <p>Admin &mdash; Domain allowlist for API access</p>
+  <div class="admin-header">
+    <a href="/" class="admin-logo">
+      <h2>Img<em>Press</em></h2>
+      <span class="admin-badge">Admin</span>
+    </a>
   </div>
 
-  <!-- Auth gate -->
-  <div id="auth-gate" class="adm-card">
-    <p class="adm-label">Enter your admin key to continue</p>
+  <!-- Auth Gate -->
+  <div id="auth-gate" class="adm-card auth-gate-card">
+    <h3 class="admin-section-title">Admin Access</h3>
+    <p class="adm-label">Enter your admin key to manage API domains</p>
     <div class="adm-row">
-      <input type="password" id="admin-key-input" class="adm-input" placeholder="Admin key…" />
+      <input type="password" id="admin-key-input" class="adm-input" placeholder="Admin key…" autocomplete="off" />
       <button id="auth-btn" class="adm-btn">Unlock →</button>
     </div>
     <p id="auth-err" class="adm-err" style="display:none">
-      Invalid key — check the <code>ADMIN_KEY</code> environment variable on the server.
+      Invalid key. Check the <code>ADMIN_KEY</code> environment variable on the server.
     </p>
   </div>
 
-  <!-- Domain panel (shown after auth) -->
+  <!-- Admin Panel (shown after auth) -->
   <div id="domain-panel" style="display:none">
 
+    <!-- WordPress Plugin Admin Section -->
     <div class="adm-card">
-      <p class="adm-label">Add domain</p>
+      <h3 class="admin-section-title">WordPress Plugin Dashboard</h3>
+      <p class="adm-label">Plugin Management</p>
+
+      <div class="adm-row">
+        <div style="flex: 1;">
+          <p style="font-size: 0.95rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px;">
+            Manage your ImgPress WordPress plugin settings and monitor compression statistics across all installations.
+          </p>
+          <div style="display: flex; gap: 12px; margin-top: 16px;">
+            <a href="https://wordpress.org/plugins/imgpress/" target="_blank" class="adm-btn" style="text-decoration: none; display: inline-flex; align-items: center;">
+              View on WordPress.org
+            </a>
+            <a href="https://docs.imgpress.io/wordpress" target="_blank" class="adm-btn" style="background: var(--card); color: var(--fg); border: 1px solid var(--card-border); text-decoration: none; display: inline-flex; align-items: center;">
+              Documentation
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Domain Management Section -->
+    <div class="adm-card">
+      <h3 class="admin-section-title">Domain Allowlist</h3>
+      <p class="adm-label">Manage API Access</p>
+
+      <div style="margin-bottom: 24px; padding: 12px 14px; background: var(--bg); border-radius: 10px; border-left: 3px solid var(--accent);">
+        <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">
+          Add domains that are allowed to access the ImgPress API. <span class="status-badge">Authorized Only</span>
+        </p>
+      </div>
+
       <div class="adm-row">
         <input type="text" id="domain-input" class="adm-input" placeholder="example.com" autocomplete="off" />
         <input type="text" id="note-input" class="adm-input adm-input--note" placeholder="Note (optional)" />
         <button id="add-btn" class="adm-btn">Add domain</button>
       </div>
       <p id="add-err" class="adm-err" style="display:none"></p>
+      <p id="add-success" class="adm-success" style="display:none"></p>
     </div>
 
     <div class="adm-card">
       <p class="adm-label">
-        Allowed domains
+        Allowed Domains
         <span id="domain-count" class="adm-count"></span>
       </p>
       <p id="empty-msg" class="adm-empty" style="display:none">

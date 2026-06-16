@@ -1,14 +1,19 @@
 :root {
-  --bg: #f4f1eb;
-  --fg: #3a3a38;
-  --accent: #e85d2a;
-  --accent-hover: #d04e1f;
-  --muted: #9c9889;
+  --bg: #fafaf9;
+  --fg: #0f172a;
+  --accent: #0f172a;
+  --accent-hover: #1a2847;
+  --secondary: #7c3aed;
+  --secondary-hover: #6d28d9;
+  --muted: #64748b;
   --card: #fff;
-  --card-border: #e2ded6;
-  --success: #2d8a4e;
-  --error: #c43d3d;
-  --radius: 14px;
+  --card-border: #e2e8f0;
+  --success: #059669;
+  --error: #dc2626;
+  --radius: 16px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,17 +35,93 @@ body::after {
   background-size: 128px;
 }
 
-.page { max-width: 620px; margin: 0 auto; padding: 60px 24px 80px; }
+.page { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
 
-.brand { margin-bottom: 48px; }
+/* ─── Header/Navigation ─────────────────────────────────────────────── */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 60px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.logo h2 {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.logo h2 em { font-style: italic; color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.nav-links a:hover { color: var(--fg); }
+
+/* ─── Hero Section ──────────────────────────────────────────────────── */
+.hero {
+  margin-bottom: 80px;
+  text-align: center;
+}
+
+.hero--compact {
+  margin-bottom: 48px;
+}
+
+.hero--compact .brand h1 {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+}
+
+.hero--compact .hero-subtitle {
+  font-size: 1rem;
+}
+
+.brand { margin-bottom: 24px; }
 .brand h1 {
   font-family: 'Instrument Serif', serif;
-  font-size: 4.2rem; font-weight: 400;
-  letter-spacing: -0.03em; line-height: 1;
+font-weight: 400;
+  font-size: 3.5rem;
+  letter-spacing: -0.01em; line-height: 1.1;
+  margin-bottom: 16px;
+  color: var(--fg);
 }
-.brand h1 em { font-style: italic; color: var(--accent); }
+.brand h1 em { font-style: italic; color: var(--secondary); }
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .brand p {
-  margin-top: 10px; font-size: 0.78rem;
+  margin-top: 10px; font-size: 0.85rem;
   color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase;
 }
 
@@ -75,24 +156,107 @@ body::after {
 
 .stype-formats { line-height: 1.5; }
 
-#drop-zone {
-  border: 1.5px dashed var(--card-border);
-  border-radius: var(--radius);
-  padding: 3rem 2rem;
-  text-align: center; cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  background: var(--card); position: relative;
+/* ─── Features Section ──────────────────────────────────────────────── */
+.features-section {
+  margin-bottom: 80px;
 }
-#drop-zone.drag-over { border-color: var(--accent); background: rgba(232,93,42,0.04); }
+
+.section-title {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 48px;
+  color: var(--fg);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 32px;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.feature-icon {
+  font-size: 2.4rem;
+  margin-bottom: 16px;
+}
+
+.feature-card h3 {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 1.3rem;
+  font-weight: 400;
+  margin-bottom: 12px;
+  color: var(--fg);
+}
+
+.feature-card p {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ─── Drop Zone (Primary Tool Section) ──────────────────────────────── */
+.tool-section {
+  margin-bottom: 100px;
+  padding: 0;
+}
+
+.tool-section h2 {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 2.2rem;
+  font-weight: 400;
+  text-align: center;
+  margin-bottom: 48px;
+  color: var(--fg);
+}
+
+#drop-zone {
+  border: 2px dashed var(--card-border);
+  border-radius: var(--radius);
+  padding: 4rem 2rem;
+  text-align: center; cursor: pointer;
+  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+  background: linear-gradient(135deg, #fafaf9 0%, #f1f5f9 100%);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+#drop-zone.drag-over {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(232,93,42,0.02) 0%, rgba(232,93,42,0.05) 100%);
+  box-shadow: var(--shadow-md);
+}
 #drop-zone input[type=file] {
   position: absolute; inset: 0;
   opacity: 0; cursor: pointer; width: 100%; height: 100%;
 }
 #drop-zone h2 {
   font-family: 'Instrument Serif', serif;
-  font-size: 1.4rem; font-weight: 400; margin-bottom: 6px;
+font-weight: 400;
+  font-size: 1.6rem; font-weight: 400; margin-bottom: 10px;
+  color: var(--fg);
 }
-#drop-zone p { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.02em; }
+#drop-zone p {
+  font-size: 0.95rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
 
 .controls {
   display: flex; gap: 10px; margin: 14px 0 4px;
@@ -105,7 +269,7 @@ body::after {
 }
 .pill {
   padding: 11px 10px;
-  font-family: 'DM Mono', monospace; font-size: 0.74rem;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.74rem;
   border: none; background: transparent; color: var(--muted);
   cursor: pointer; transition: all 0.18s;
   letter-spacing: 0.04em; text-transform: uppercase;
@@ -130,7 +294,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 select {
   height: 40px; padding: 0 10px;
   width: 95px;
-  font-size: 0.74rem; font-family: 'DM Mono', monospace;
+  font-size: 0.74rem; font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   border-radius: 10px; border: 1.5px solid var(--card-border);
   background: var(--card); color: var(--fg);
   cursor: pointer; outline: none; letter-spacing: 0.02em;
@@ -138,7 +302,7 @@ select {
 
 #recompress-btn {
   height: 40px; width: 40px;
-  font-size: 1.2rem; font-family: 'DM Mono', monospace;
+  font-size: 1.2rem; font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   border-radius: 10px; border: 1.5px solid var(--accent);
   background: var(--accent); color: #fff;
   cursor: pointer; outline: none; letter-spacing: 0.04em;
@@ -271,10 +435,311 @@ select {
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
+/* ─── WordPress Plugin Section ──────────────────────────────────────── */
+.wordpress-section {
+  margin: 80px 0;
+  background: linear-gradient(135deg, #fafaf9 0%, #f1f5f9 100%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.wordpress-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.wordpress-icon {
+  font-size: 3.5rem;
+  margin-bottom: 20px;
+}
+
+.wordpress-section h3 {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: 16px;
+  color: var(--fg);
+}
+
+.wordpress-section p {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+.wordpress-features {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.wp-feature {
+  flex: 1;
+  min-width: 150px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+}
+
+.wp-feature-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.wp-feature-text {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.download-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: var(--card);
+  color: var(--fg);
+  border: 2px solid var(--card-border);
+  border-radius: 10px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.btn-secondary:hover {
+  border-color: var(--fg);
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── Installation Instructions ─────────────────────────────────────── */
+.installation-section {
+  margin: 80px 0;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.installation-step {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.installation-step h4 {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 12px;
+  color: var(--fg);
+}
+
+.installation-step p {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.code-block {
+  background: var(--fg);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.85rem;
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.step-number {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 28px;
+  font-weight: bold;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+/* ─── CTA Section ───────────────────────────────────────────────────── */
+.cta-section {
+  margin: 80px 0;
+  background: linear-gradient(135deg, var(--fg) 0%, #1e293b 100%);
+  border-radius: var(--radius);
+  padding: 60px 40px;
+  text-align: center;
+  color: #fff;
+}
+
+.cta-section h3 {
+  font-family: 'Instrument Serif', serif;
+font-weight: 400;
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: 16px;
+}
+
+.cta-section p {
+  font-size: 1.05rem;
+  color: #e2e8f0;
+  margin-bottom: 32px;
+  line-height: 1.7;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-white {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: #fff;
+  color: var(--fg);
+  border: none;
+  border-radius: 10px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.btn-white:hover {
+  background: #f1f5f9;
+  box-shadow: var(--shadow-lg);
+}
+
 .footer {
   margin-top: 56px; text-align: center;
-  font-size: 0.68rem; color: var(--muted);
+  font-size: 0.75rem; color: var(--muted);
   letter-spacing: 0.05em; text-transform: uppercase; line-height: 2;
+}
+
+/* ─── WordPress CTA ────────────────────────────────────────────────── */
+.wordpress-cta {
+  margin-top: 32px;
+  padding: 16px;
+  background: rgba(124, 58, 237, 0.05);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.wordpress-cta p {
+  font-size: 0.9rem;
+  color: var(--fg);
+  margin: 8px 0;
+}
+
+.wordpress-cta p:first-child {
+  margin-top: 0;
+}
+
+.wp-note {
+  font-size: 0.75rem !important;
+  color: var(--muted) !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 10px !important;
+}
+
+.wp-link {
+  color: var(--secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.wp-link:hover {
+  color: var(--secondary-hover);
+  text-decoration: underline;
+}
+
+/* ─── Site Footer ──────────────────────────────────────────────────── */
+.site-footer {
+  margin-top: 48px;
+  padding: 48px 0 32px;
+  border-top: 1px solid var(--card-border);
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.site-footer a {
+  color: var(--secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.site-footer a:hover {
+  color: var(--secondary-hover);
+  text-decoration: underline;
 }
 
 .compare-wrap {
@@ -364,7 +829,7 @@ select {
   border-radius: 8px;
   border: 1.5px solid var(--card-border);
   background: transparent;
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 0.66rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -376,12 +841,21 @@ select {
 .compare-btn:hover { border-color: var(--fg); color: var(--fg); }
 .compare-btn.active { border-color: var(--accent); color: var(--accent); }
 
-@media (max-width: 620px) {
-  .brand h1 { font-size: 3rem; }
-  .page { padding: 40px 16px 60px; }
+@media (max-width: 768px) {
+  header { flex-direction: column; gap: 16px; margin-bottom: 40px; }
+  .nav-links { gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .brand h1 { font-size: 2.5rem; }
+  .hero { margin-bottom: 60px; }
+  .page { padding: 24px 16px 60px; max-width: 100%; }
   .pill-group { width: 100%; }
   .pill { flex:1; text-align: center; }
   .quality-wrap { flex: 1; }
   input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; }
   .stype { flex-wrap: wrap; }
+  .features-grid { grid-template-columns: 1fr; }
+  .download-buttons { flex-direction: column; }
+  .btn-primary, .btn-secondary, .btn-white { width: 100%; justify-content: center; }
+  .wordpress-section { padding: 40px 24px; }
+  .cta-section { padding: 40px 24px; }
+  .section-title { font-size: 1.8rem; }
 }

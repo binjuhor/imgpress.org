@@ -126,6 +126,8 @@ const MIME_TO_FORMAT = {
   'image/heic': 'jpeg', 'image/heif': 'jpeg',
 }
 
+const IMAGE_OUTPUT_FORMATS = new Set(['webp', 'avif', 'jpeg', 'jpg', 'png', 'gif'])
+
 // Formats that cannot be meaningfully compressed — return as-is
 const PASSTHROUGH_MIMES = new Set(['image/svg+xml'])
 
@@ -157,6 +159,19 @@ function compressTimeout(req, res, next) {
 function parseNumber(value, fallback) {
   const n = Number(value)
   return Number.isNaN(n) ? fallback : n
+}
+
+function resolveOutputFormat(requestedFormat, inputMime, fallback = 'webp') {
+  const format = String(requestedFormat || fallback).toLowerCase()
+  if (format === 'auto') return MIME_TO_FORMAT[inputMime] ?? fallback
+  return IMAGE_OUTPUT_FORMATS.has(format) ? format : fallback
+}
+
+function requestedPdfImageFormat(requestedFormat) {
+  if (!requestedFormat) return null
+  const format = String(requestedFormat).toLowerCase()
+  if (format === 'auto') return null
+  return IMAGE_OUTPUT_FORMATS.has(format) ? format : null
 }
 
 // ─── Temp file helpers ────────────────────────────────────────────────────────
@@ -361,6 +376,31 @@ async function compressPdf(buffer, options = {}) {
   }
 }
 
+async function pdfToImage(buffer, options = {}) {
+  const { format = 'png', quality = config.DEFAULT_QUALITY, width = config.DEFAULT_WIDTH } = options
+  const inputPath = await writeTempFile(buffer, '.pdf')
+  const renderPath = inputPath.replace('.pdf', '-page-1.png')
+
+  try {
+    await execFileAsync('gs', [
+      '-sDEVICE=pngalpha',
+      '-dFirstPage=1',
+      '-dLastPage=1',
+      '-r144',
+      '-dNOPAUSE',
+      '-dQUIET',
+      '-dBATCH',
+      `-sOutputFile=${renderPath}`,
+      inputPath,
+    ], { timeout: COMPRESS_TIMEOUT_MS })
+
+    const rendered = await fs.readFile(renderPath)
+    return await compressImage(rendered, { format, quality, width })
+  } finally {
+    await removeTempFiles(inputPath, renderPath)
+  }
+}
+
 // ─── API job store (in-memory, TTL-based) ─────────────────────────────────────
 
 const jobStore = new Map()
@@ -479,6 +519,8 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
     try {
       let result
 
+      const rawFormat = req.query.format == null ? null : String(req.query.format)
+
       if (PASSTHROUGH_MIMES.has(mime)) {
         return res.json({
           name, mime,
@@ -492,7 +534,10 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
       } else if (isVideo) {
         result = await convertVideo(req.file.buffer, { quality })
       } else if (mime === 'application/pdf') {
-        result = await compressPdf(req.file.buffer, { quality })
+        const format = requestedPdfImageFormat(rawFormat)
+        result = format
+          ? await pdfToImage(req.file.buffer, { format, quality, width })
+          : await compressPdf(req.file.buffer, { quality })
       } else {
         let imgBuffer = req.file.buffer
         let imgMime   = mime
@@ -506,8 +551,7 @@ app.post('/compress/one', compressTimeout, upload.single('file'), async (req, re
           imgMime   = 'image/png'
         }
 
-        const rawFormat = String(req.query.format || 'webp')
-        const format = rawFormat === 'auto' ? (MIME_TO_FORMAT[imgMime] ?? 'webp') : rawFormat
+        const format = resolveOutputFormat(rawFormat, imgMime, 'webp')
         result = await compressImage(imgBuffer, { format, quality, width })
       }
 
@@ -572,7 +616,10 @@ async function compressOne(file, options) {
     } else if (isVideo) {
       result = await convertVideo(file.buffer, { quality })
     } else if (mime === 'application/pdf') {
-      result = await compressPdf(file.buffer, { quality })
+      const resolvedFormat = requestedPdfImageFormat(format)
+      result = resolvedFormat
+        ? await pdfToImage(file.buffer, { format: resolvedFormat, quality, width })
+        : await compressPdf(file.buffer, { quality })
     } else {
       let imgBuffer = file.buffer
       let imgMime   = mime
@@ -582,7 +629,7 @@ async function compressOne(file, options) {
         imgMime   = 'image/png'
       }
 
-      const resolvedFormat = format === 'auto' ? (MIME_TO_FORMAT[imgMime] ?? 'webp') : format
+      const resolvedFormat = resolveOutputFormat(format, imgMime, 'webp')
       result = await compressImage(imgBuffer, { format: resolvedFormat, quality, width })
     }
 
@@ -615,7 +662,7 @@ app.post('/api/compress', checkDomain, compressTimeout, upload.array('files', co
 
     const quality = parseNumber(req.query.quality, config.DEFAULT_QUALITY)
     const width   = parseNumber(req.query.width, config.DEFAULT_WIDTH)
-    const format  = String(req.query.format || 'webp')
+    const format  = req.query.format == null ? null : String(req.query.format)
 
     const results = await Promise.all(req.files.map(f => compressOne(f, { quality, width, format })))
     return res.json({ results })

@@ -308,7 +308,7 @@ function initCompareDrag(id, wrap) {
       if (pb) pb.style.display = 'none'
       if (st) st.innerHTML = statusHtml(r)
       const pct = Math.round((1 - r.compressedSize / r.originalSize) * 100)
-      if (dl && !r.error && pct > 0) dl.disabled = false
+      if (dl && isDownloadableResult(r, item)) dl.disabled = false
       if (!r.error && pct > 0 && r.data && item?.previewable) {
         const cmpBtn = document.getElementById('cmp-btn-' + id)
         if (cmpBtn) cmpBtn.disabled = false
@@ -341,7 +341,14 @@ function initCompareDrag(id, wrap) {
   function statusHtml(r) {
     if (r.error) return `<span class="badge badge-error">Failed: ${r.message || 'unknown'}</span>`
     const pct = Math.round((1 - r.compressedSize / r.originalSize) * 100)
+    const item = items.find(it => results[it.id] === r)
+    const converted = item && r.mime && r.mime !== item.file.type
     if (pct <= 0) {
+      if (converted) {
+        return `
+          <span class="badge badge-success">Converted</span>
+          <span style="font-size:0.68rem;color:var(--muted)">${fmtBytes(r.originalSize)} → ${fmtBytes(r.compressedSize)}</span>`
+      }
       return `
         <span class="badge badge-error">Already optimised</span>
         <span style="font-size:0.65rem;color:var(--muted);line-height:1.4">Images are already optimized.</span>`
@@ -350,13 +357,15 @@ function initCompareDrag(id, wrap) {
       <span class="badge badge-success">−${pct}%</span>
       <span style="font-size:0.68rem;color:var(--muted)">${fmtBytes(r.originalSize)} → ${fmtBytes(r.compressedSize)}</span>`
   }
+
+  function isDownloadableResult(r, item) {
+    if (!r || r.error || !r.data) return false
+    const pct = Math.round((1 - r.compressedSize / r.originalSize) * 100)
+    return pct > 0 || Boolean(item && r.mime && r.mime !== item.file.type)
+  }
  
   function updateSummary() {
-    const valid = Object.values(results).filter(r => {
-      if (!r || r.error) return false
-      const pct = Math.round((1 - r.compressedSize / r.originalSize) * 100)
-      return pct > 0
-    })
+    const valid = items.map(it => results[it.id]).filter((r, idx) => isDownloadableResult(r, items[idx]))
     if (!valid.length) { summary.style.display = 'none'; return }
  
     const totalOrig = valid.reduce((s, r) => s + r.originalSize, 0)
@@ -405,8 +414,7 @@ function initCompareDrag(id, wrap) {
 
     const compressible = items.filter(it => {
       const r = results[it.id]
-      if (!r || r.error) return false
-      return Math.round((1 - r.compressedSize / r.originalSize) * 100) > 0
+      return isDownloadableResult(r, it)
     })
     if (!compressible.length) {
       alert('No images to download.')

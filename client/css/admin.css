@@ -1,0 +1,257 @@
+.admin-page { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .admin-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--fg);
+    }
+
+    .admin-logo h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin: 0;
+    }
+
+    .admin-logo h2 em { font-style: italic; color: var(--accent); }
+
+    .admin-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: rgba(232, 93, 42, 0.1);
+      color: var(--accent);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .adm-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+    }
+
+    .adm-card:hover { box-shadow: var(--shadow-md); }
+
+    .adm-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .adm-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .adm-input {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--fg);
+      flex: 1;
+      min-width: 180px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .adm-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232, 93, 42, 0.1);
+    }
+
+    .adm-input--note { max-width: 240px; }
+
+    .adm-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .adm-btn:hover {
+      background: var(--accent-hover);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .adm-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .adm-err {
+      font-size: 0.85rem;
+      color: var(--error);
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(220, 38, 38, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+
+    .adm-success {
+      font-size: 0.85rem;
+      color: var(--success);
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(5, 150, 105, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(5, 150, 105, 0.2);
+    }
+
+    .adm-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.9rem;
+    }
+
+    .adm-table th {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 500;
+    }
+
+    .adm-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--card-border);
+      font-family: 'DM Mono', monospace;
+      vertical-align: middle;
+    }
+
+    .adm-table tr:last-child td { border-bottom: none; }
+
+    .adm-table tr:hover {
+      background: var(--bg);
+    }
+
+    .adm-domain { font-weight: 500; color: var(--fg); }
+    .adm-note { color: var(--muted); font-size: 0.85rem; }
+    .adm-date { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+
+    .adm-del {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      background: none;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--error);
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .adm-del:hover {
+      background: rgba(220, 38, 38, 0.05);
+      border-color: var(--error);
+    }
+
+    .adm-del:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .adm-empty {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 20px;
+      padding: 24px;
+      background: var(--bg);
+      border-radius: 10px;
+      text-align: center;
+      border: 1px solid var(--card-border);
+    }
+
+    .adm-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-left: 8px;
+    }
+
+    .adm-back {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 32px;
+      transition: color 0.2s;
+    }
+
+    .adm-back:hover { color: var(--accent); }
+
+    .auth-gate-card { border: 2px solid var(--card-border); }
+
+    .admin-section-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.8rem;
+      font-weight: 400;
+      margin-bottom: 24px;
+      color: var(--fg);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--success);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+      .admin-page { padding: 24px 16px 60px; }
+      .admin-header { flex-direction: column; gap: 16px; }
+      .adm-row { flex-direction: column; }
+      .adm-input { width: 100%; }
+      .adm-btn { width: 100%; }
+      .adm-table { font-size: 0.8rem; }
+      .adm-table th, .adm-table td { padding: 10px 12px; }
+    }

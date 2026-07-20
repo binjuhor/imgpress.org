@@ -201,7 +201,16 @@ Open `http://localhost:3000` in your browser to access the ImgPress web interfac
 ```
 img-optimize/
 ├── server/
-│   ├── server.js         # Express server & compression logic
+│   ├── config/           # Environment-based configuration
+│   ├── constants/        # Supported media types and extensions
+│   ├── database/         # Database connection and setup
+│   ├── middleware/       # Authentication, uploads, CORS, timeouts
+│   ├── routes/           # Admin and compression HTTP routes
+│   ├── services/         # Image, audio, video, and PDF processing
+│   ├── stores/           # Temporary download job storage
+│   ├── utils/            # Option parsing and temporary files
+│   ├── app.js            # Express app assembly
+│   ├── server.js         # Process entry point and HTTP startup
 │   └── package.json      # Dependencies
 ├── client/
 │   ├── index.html        # Web UI

@@ -154,6 +154,7 @@ const API_BASE = window.location.origin || 'http://localhost:3000'
   } else {
     thumbEl = document.createElement('div')
     thumbEl.className = 'file-thumb file-icon'
+    thumbEl.id = 'thumb-' + id
     thumbEl.textContent = isImage ? imageExtIcon(file) : fileIcon(category)
     thumbEl.dataset.category = category
   }
@@ -261,6 +262,8 @@ function initCompareDrag(id, wrap) {
   function removeCard(id) {
     const card = document.getElementById('card-' + id)
     if (card) card.remove()
+    const item = items.find(it => it.id === id)
+    if (item?.convertedPreviewUrl) URL.revokeObjectURL(item.convertedPreviewUrl)
     items = items.filter(it => it.id !== id)
     delete results[id]
     items.length ? updateSummary() : (summary.style.display = 'none', recompressBtn.style.display = 'none')
@@ -319,6 +322,28 @@ function initCompareDrag(id, wrap) {
         const compUrl = URL.createObjectURL(new Blob([arr], { type: mime }))
         const afterEl = document.getElementById('cmp-after-' + id)
         if (afterEl) afterEl.style.backgroundImage = `url('${compUrl}')`
+      }
+      if (!r.error && r.data && item?.category === 'image' && !item.previewable) {
+        const target = document.getElementById('thumb-' + id)
+        if (target) {
+          const mime = r.mime || 'image/webp'
+          const byteStr = atob(r.data)
+          const arr = new Uint8Array(byteStr.length)
+          for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j)
+          const convertedUrl = URL.createObjectURL(new Blob([arr], { type: mime }))
+          if (item.convertedPreviewUrl) URL.revokeObjectURL(item.convertedPreviewUrl)
+          item.convertedPreviewUrl = convertedUrl
+          if (target.tagName === 'IMG') {
+            target.src = convertedUrl
+          } else {
+            const thumb = document.createElement('img')
+            thumb.className = 'file-thumb'
+            thumb.id = 'thumb-' + id
+            thumb.src = convertedUrl
+            thumb.alt = ''
+            target.replaceWith(thumb)
+          }
+        }
       }
     } catch (err) {
       const pb = document.getElementById('pb-' + id)
@@ -460,6 +485,9 @@ function initCompareDrag(id, wrap) {
   // ── Clear all ─────────────────────────────────────────────────────────────────
 
   clearLink.addEventListener('click', () => {
+    items.forEach(item => {
+      if (item.convertedPreviewUrl) URL.revokeObjectURL(item.convertedPreviewUrl)
+    })
     items = []; results = {}
     queue.length = 0
     fileList.innerHTML = ''

@@ -66,7 +66,7 @@ export async function compressImage(buffer, options = {}) {
     pipeline = pipeline.jpeg({ quality: outputQuality, mozjpeg: true, progressive: true, optimiseCoding: true, trellisQuantisation: true, overshootDeringing: true, optimiseScans: true })
     mime = 'image/jpeg'
   } else if (format === 'png') {
-    pipeline = pipeline.png({ compressionLevel: 9, adaptiveFiltering: true, palette: true, quality: outputQuality, effort: 10, dither: smartDither(outputQuality) })
+    pipeline = pipeline.png({ compressionLevel: 9, adaptiveFiltering: true, palette: false })
     mime = 'image/png'
   } else if (format === 'avif') {
     pipeline = pipeline.avif({ quality: Math.min(outputQuality, 70), effort: 6, chromaSubsampling: '4:2:0', lossless: false })
@@ -90,7 +90,6 @@ export async function heicToPng(buffer) {
     await execFileAsync('ffmpeg', [
       '-i', inputPath,
       '-vframes', '1',
-      '-vf', 'format=rgb24',
       '-y',
       outputPath,
     ], { timeout: config.COMPRESS_TIMEOUT_MS })
